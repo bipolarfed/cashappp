@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skibidi IPA Builder</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">📱</span>
+      <h1>Skibidi IPA Builder</h1>
+    </div>
+    <div class="topbar-actions">
+      <div id="deviceStatus" class="device-badge offline">
+        <span class="dot"></span>
+        <span class="label">No device</span>
+      </div>
+      <button id="btnRefreshDevice" class="btn btn-ghost" title="Refresh devices">↻</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Mini IDE panel -->
+    <aside class="panel ide-panel">
+      <div class="panel-header">
+        <span>Project</span>
+        <div class="panel-tools">
+          <select id="projectSelect"></select>
+          <button id="btnNewProject" class="btn btn-sm">+ New</button>
+        </div>
+      </div>
+      <div id="fileTree" class="file-tree"></div>
+      <div class="panel-header editor-header">
+        <span id="openFileLabel">No file open</span>
+        <button id="btnSave" class="btn btn-sm btn-primary" disabled>Save</button>
+      </div>
+      <div id="editor" class="editor"></div>
+    </aside>
+
+    <!-- Build & Sign panel -->
+    <section class="panel work-panel">
+      <nav class="tabs">
+        <button class="tab active" data-tab="build">Build</button>
+        <button class="tab" data-tab="sign">Sign & Install</button>
+        <button class="tab" data-tab="tools">Tools</button>
+        <button class="tab" data-tab="log">Log</button>
+      </nav>
+
+      <div class="tab-content active" id="tab-build">
+        <h2>Build IPA</h2>
+        <p class="hint">Swift needs macOS to compile. Push to GitHub to build on a free macOS runner, or package a pre-built .app locally.</p>
+
+        <div id="buildStatus" class="status-banner hidden" role="status"></div>
+
+        <div class="form-group">
+          <label>Bundle ID</label>
+          <input type="text" id="buildBundleId" placeholder="com.skibidi.myapp">
+        </div>
+
+        <div class="card">
+          <h3>Remote Build (GitHub Actions)</h3>
+          <p class="hint">Generates a workflow file. Push your project to GitHub and run the workflow — download the IPA artifact when done.</p>
+          <button id="btnGenWorkflow" class="btn btn-primary" type="button">Generate GitHub Workflow</button>
+          <p id="workflowResult" class="hint workflow-result hidden"></p>
+        </div>
+
+        <div class="card">
+          <h3>Local Package (.app → .ipa)</h3>
+          <div class="form-group">
+            <label>Path to .app bundle</label>
+            <input type="text" id="appPath" placeholder="C:\path\to\MyApp.app">
+          </div>
+          <div class="form-group">
+            <label>Output IPA name</label>
+            <input type="text" id="ipaOutputName" value="output.ipa">
+          </div>
+          <button id="btnPackageIpa" class="btn btn-primary">Package IPA</button>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-sign">
+        <h2>Sign & Install</h2>
+        <p class="hint">Uses <a href="https://github.com/Dadoum/Sideloader" target="_blank">Sideloader</a> (open-source, same approach as Sideloadly) + <a href="https://github.com/zhlynn/zsign" target="_blank">zsign</a>.</p>
+
+        <div class="form-group">
+          <label>IPA path</label>
+          <div class="input-row">
+            <input type="text" id="signIpaPath" placeholder="dist/output.ipa">
+            <input type="file" id="ipaUpload" accept=".ipa" hidden>
+            <button id="btnUploadIpa" class="btn">Upload</button>
+          </div>
+        </div>
+
+        <div class="sign-mode">
+          <label><input type="radio" name="signMode" value="appleid" checked> Apple ID Sideload</label>
+          <label><input type="radio" name="signMode" value="cert"> Certificate (p12 + profile)</label>
+          <label><input type="radio" name="signMode" value="adhoc"> Ad-hoc (export only)</label>
+        </div>
+
+        <div id="appleIdFields">
+          <div class="form-group">
+            <label>Apple ID</label>
+            <input type="email" id="appleId" autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label>App-specific password</label>
+            <input type="password" id="applePassword" autocomplete="current-password">
+            <small class="hint"><a href="https://appleid.apple.com/account/manage" target="_blank">Create app-specific password</a> — never use your main password.</small>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Bundle ID (optional)</label>
+              <input type="text" id="signBundleId" placeholder="com.example.app">
+            </div>
+            <div class="form-group">
+              <label>App name (optional)</label>
+              <input type="text" id="signAppName" placeholder="My App">
+            </div>
+          </div>
+        </div>
+
+        <div id="certFields" hidden>
+          <div class="form-group">
+            <label>P12 certificate</label>
+            <input type="file" id="p12Upload" accept=".p12,.pfx">
+          </div>
+          <div class="form-group">
+            <label>P12 password</label>
+            <input type="password" id="p12Password">
+          </div>
+          <div class="form-group">
+            <label>Provisioning profile (.mobileprovision)</label>
+            <input type="file" id="provisionUpload" accept=".mobileprovision">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Target device</label>
+          <select id="deviceSelect"><option value="">Auto-detect</option></select>
+        </div>
+
+        <div class="btn-row">
+          <button id="btnSignInstall" class="btn btn-primary btn-lg">Sign & Install to iPhone</button>
+          <button id="btnSignOnly" class="btn">Sign Only (export IPA)</button>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-tools">
+        <h2>Tool Status</h2>
+        <div id="toolsStatus" class="tools-grid">Loading...</div>
+        <div class="card setup-card">
+          <h3>First-time setup</h3>
+          <ol>
+            <li>Install <strong>iTunes</strong> or Apple Mobile Device Support (for USB driver)</li>
+            <li>Run <code>npm run setup</code> in the project folder to download tools</li>
+            <li>Trust your PC on the iPhone when prompted</li>
+            <li>Enable <strong>Developer Mode</strong> on iOS 16+ (Settings → Privacy & Security)</li>
+          </ol>
+          <p class="hint">Sideloadly is closed-source. This app uses the open-source <strong>Sideloader</strong> + <strong>zsign</strong> stack instead — same signing approach.</p>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-log">
+        <div class="log-toolbar">
+          <button id="btnClearLog" class="btn btn-sm">Clear</button>
+        </div>
+        <pre id="logOutput" class="log-output"></pre>
+      </div>
+    </section>
+  </main>
+
+  <!-- New project modal -->
+  <dialog id="newProjectModal">
+    <form method="dialog">
+      <h3>New Swift Project</h3>
+      <div class="form-group">
+        <label>Project name</label>
+        <input type="text" id="newProjectName" placeholder="MyApp" required pattern="[a-zA-Z][a-zA-Z0-9_]*">
+      </div>
+      <div class="form-group">
+        <label>Bundle ID</label>
+        <input type="text" id="newProjectBundleId" placeholder="com.skibidi.myapp">
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary">Create</button>
+        <button type="button" class="btn" id="btnCancelNew">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

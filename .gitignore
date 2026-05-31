@@ -1,0 +1,9 @@
+node_modules/
+dist/uploads/
+tools/sideloader/
+tools/libimobiledevice/
+tools/zsign/
+_vendor/
+*.ipa
+.env
+.DS_Store

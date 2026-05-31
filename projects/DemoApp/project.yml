@@ -1,0 +1,22 @@
+name: DemoApp
+options:
+  bundleIdPrefix: com.skibidi
+  deploymentTarget:
+    iOS: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1,2"
+targets:
+  DemoApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/DemoApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.skibidi.demo
+        INFOPLIST_KEY_CFBundleDisplayName: DemoApp
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
